@@ -1,9 +1,10 @@
 const mongoose = require('mongoose');
 const constants = require("../lib/constants");
+const { v4: uuidv4 } = require('uuid');
 
 const testimonialSchema = new mongoose.Schema(
     {
-        testimonialId: {type: String, required: true, unique: true},
+        testimonialId: {type: String, unique: true, default: uuidv4},
         userId: {type: String, required: true},
         customerName: {type: String, required: true},
         customerEmail: {type: String, required: false},
