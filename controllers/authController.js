@@ -13,7 +13,7 @@ const registerUser = async (req, res) => {
 
         const emailResult = utils.validateEmail(email);
         const passwordResult = utils.validatePassword(password);
-        const businessNameResult = utils.validateBusinessName(businessName);
+        const businessNameResult = utils.validateName(businessName);
 
         const errors = {
             ...(emailResult.valid ? {} : { email: emailResult.errors }),
@@ -39,7 +39,7 @@ const registerUser = async (req, res) => {
 
         const {password: _, ...safeUser} = user.toObject();
 
-        res.json({ code: 201, status: 'success', data: safeUser });
+        res.status(201).json({ code: 201, status: 'success', data: safeUser });
     } catch (err) {
         console.log(err);
         res.status(500).json({ code: 500, status: 'failure', message: 'Server error' });
@@ -59,7 +59,7 @@ const loginUser = async (req, res) => {
 
         if (isValid) {
             const token = jwt.sign(
-                {userId: user.id, email: user.email},
+                {userId: user.userId, email: user.email},
                 process.env.JWT_SECRET,
                 {expiresIn: process.env.JWT_EXPIRY},
             )

@@ -10,10 +10,11 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 const userRoute = require('./routes/authRoute');
+const testimonialRoute = require('./routes/testimonialRoute');
 
 app.use(express.json());
-app.use("/api/auth", userRoute);
-app.use("/api/testimonials")
+app.use('/api/auth', userRoute);
+app.use('/api/testimonials', testimonialRoute)
 
 app.get('/ping', (req, res) => {
     res.json({ message: 'pong' });

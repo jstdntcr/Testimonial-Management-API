@@ -1,0 +1,251 @@
+const Testimonial = require('../models/Testimonial');
+const utils = require('../lib/utils');
+const constants = require('../lib/constants');
+
+const createTestimonial = async (req, res) => {
+    try {
+        const {customerName, customerEmail, customerPhone,
+        videoUrl, rating, text, consentGiven, sharedChannels} = req.body;
+
+        const customerEmailResult = customerEmail ? utils.validateEmail(customerEmail) : { valid: true };
+        const customerNameResult = utils.validateName(customerName);
+
+        const errors = {
+            ...(customerEmailResult.valid ? {} : { customerEmail: customerEmailResult.errors }),
+            ...(customerNameResult.valid ? {} : { customerName: customerNameResult.errors }),
+        };
+
+        if (Object.keys(errors).length > 0) {
+            return res.status(400).json({ code: 400, status: 'failure', errors });
+        }
+
+        const testimonial = await Testimonial.create({
+            userId: req.user.userId,
+            customerName,
+            customerEmail,
+            customerPhone,
+            videoUrl,
+            rating,
+            text,
+            consentGiven,
+            sharedChannels,
+        });
+
+        res.json({ code: 201, status: 'success', data: testimonial.toObject() });
+    } catch (err) {
+        console.log(err);
+        res.status(500).json({ code: 500, status: 'failure', message: 'Server error' });
+    }
+}
+
+const getTestimonials = async (req, res) => {
+    try {
+        const filter = { userId: req.user.userId, isDeleted: false };
+
+        if (req.query.status) {
+            filter.status = req.query.status;
+        }
+
+        const page = parseInt(req.query.page) || constants.page;
+        const limit = parseInt(req.query.limit) || constants.limit;
+        const skip = (page - 1) * limit;
+        const sort = req.query.sort || constants.sortingField;
+
+        const total = await Testimonial.countDocuments(filter);
+        const pages = Math.ceil(total / limit);
+        const testimonials = await Testimonial.find(filter)
+            .skip(skip)
+            .limit(limit)
+            .sort({ [sort]: -1 });
+
+        const result = testimonials.map(testimonial => testimonial.toObject());
+
+        res.status(200).json({code: 200, status: 'success', message: 'Data retrieved successfully',
+            data: result, pagination: {total, page, limit, pages}});
+    } catch (err) {
+        console.log(err);
+        res.status(500).json({ code: 500, status: 'failure', message: 'Server error' });
+    }
+}
+
+const getTestimonialById = async (req, res) => {
+    try {
+        const {testimonialId} = req.params;
+
+        const testimonial = await Testimonial.findOne({
+            testimonialId: testimonialId,
+            userId: req.user.userId,
+            isDeleted: false
+        });
+
+        res.status(200).json({code: 200, status: 'success', data: testimonial.toObject()});
+    } catch (err) {
+        console.log(err);
+        res.status(500).json({ code: 500, status: 'failure', message: 'Server error' });
+    }
+}
+
+const updateTestimonialById = async (req, res) => {
+    try {
+        const {testimonialId} = req.params;
+        const {customerName, customerEmail, customerPhone,
+            videoUrl, rating, text, consentGiven, sharedChannels} = req.body;
+
+        const customerEmailResult = customerEmail ? utils.validateEmail(customerEmail) : { valid: true };
+        const customerNameResult = customerName ? utils.validateName(customerName) : { valid: true };
+
+        const errors = {
+            ...(customerEmailResult.valid ? {} : { customerEmail: customerEmailResult.errors }),
+            ...(customerNameResult.valid ? {} : { customerName: customerNameResult.errors }),
+        };
+
+        if (Object.keys(errors).length > 0) {
+            return res.status(400).json({ code: 400, status: 'failure', errors });
+        }
+
+        const updates = {};
+        if (customerName !== undefined) updates.customerName = customerName;
+        if (customerEmail !== undefined) updates.customerEmail = customerEmail;
+        if (customerPhone !== undefined) updates.customerPhone = customerPhone;
+        if (videoUrl !== undefined) updates.videoUrl = videoUrl;
+        if (rating !== undefined) updates.rating = rating;
+        if (text !== undefined) updates.text = text;
+        if (consentGiven !== undefined) updates.consentGiven = consentGiven;
+        if (sharedChannels !== undefined) updates.sharedChannels = sharedChannels;
+
+        const updatedTestimonial = await Testimonial.findOneAndUpdate(
+            {testimonialId: testimonialId, userId: req.user.userId, isDeleted: false},
+            { $set: updates },
+            {new: true}
+        );
+
+        if (!updatedTestimonial) {
+            return res.status(404).json({ code: 404, status: 'failure', message: 'Testimonial not found' });
+        }
+
+        res.status(200).json({code: 200, status: 'success', data: updatedTestimonial.toObject()});
+    } catch (err) {
+        console.log(err);
+        res.status(500).json({ code: 500, status: 'failure', message: 'Server error' });
+    }
+}
+
+const testimonialTransition = async (req, res) => {
+    try {
+        const {testimonialId} = req.params;
+        const {testimonialStatus} = req.body;
+
+        const testimonial = await Testimonial.findOne({
+            testimonialId: testimonialId,
+            userId: req.user.userId,
+            isDeleted: false
+        });
+
+        if (!testimonial) {
+            return res.status(404).json({ code: 404, status: 'failure', message: 'Testimonial not found' });
+        }
+
+        const currentStatus = testimonial.status;
+        const currentStatusIndex = constants.testimonialStatus.indexOf(currentStatus);
+        const newStatusIndex = constants.testimonialStatus.indexOf(testimonialStatus);
+
+        if (newStatusIndex - currentStatusIndex !== 1 || currentStatusIndex === constants.testimonialStatus.length - 1) {
+            return res.status(400).json({code: 400, status: 'failure',
+                message: `Cannot transition from ${currentStatus} to ${testimonialStatus}`});
+        }
+
+        const updates = { status: testimonialStatus };
+
+        if (testimonialStatus === 'shared') {
+            updates.sharedAt = new Date();
+        }
+
+        const updatedTestimonial = await Testimonial.findOneAndUpdate(
+            {testimonialId: testimonialId},
+            { $set: updates},
+            {new: true}
+        );
+
+
+    } catch (err) {
+        console.log(err);
+        res.status(500).json({ code: 500, status: 'failure', message: 'Server error' });
+    }
+}
+
+const deleteTestimonial = async (req, res) => {
+    try {
+        const {testimonialId} = req.params;
+
+        const updates = {
+            isDeleted: true,
+            deletedAt: new Date()
+        }
+
+        const deletedTestimonial = await Testimonial.findOneAndUpdate({
+            testimonialId: testimonialId,
+            userId: req.user.userId,
+            isDeleted: false
+        },
+            { $set: updates},
+            {new: true}
+        );
+
+        if (!deletedTestimonial) {
+            return res.status(404).json({ code: 404, status: 'failure', message: 'Testimonial not found' });
+        }
+
+        res.status(200).json({code: 200, status: 'success', message: 'Testimonial deleted successfully' });
+    } catch (err) {
+        console.log(err);
+        res.status(500).json({ code: 500, status: 'failure', message: 'Server error' });
+    }
+}
+
+const shareTestimonial = async (req, res) => {
+    try {
+        const {testimonialId} = req.params;
+        const {channels} = req.body;
+
+        const invalidChannels = channels.filter(channel => !constants.channels.includes(channel));
+        if (invalidChannels.length > 0) {
+            return res.status(400).json({ code: 400, status: 'failure',
+                message: `Invalid channels: ${invalidChannels.join(', ')}`
+            });
+        }
+
+        const testimonial = await Testimonial.findOne({
+            testimonialId: testimonialId,
+            userId: req.user.userId,
+            isDeleted: false
+        });
+
+        if (!testimonial) {
+            return res.status(404).json({ code: 404, status: 'failure', message: 'Testimonial not found' });
+        }
+
+        const resultChannels = new Set([...testimonial.sharedChannels, ...channels]);
+        const updates = {
+            sharedChannels: [...resultChannels],
+            sharedAt: new Date()
+        };
+
+        if (testimonial.status === 'completed') {
+            updates.status = 'shared';
+        }
+
+        const updatedTestimonial = await Testimonial.findOneAndUpdate(
+            {testimonialId: testimonialId},
+            { $set: updates},
+            { new: true}
+        );
+
+        res.status(200).json({ code: 200, status: 'success', data: updatedTestimonial.toObject() });
+    } catch (err) {
+        console.log(err);
+        res.status(500).json({ code: 500, status: 'failure', message: 'Server error' });
+    }
+}
+
+module.exports = {createTestimonial, getTestimonials, getTestimonialById, updateTestimonialById,
+    testimonialTransition, deleteTestimonial, shareTestimonial};

@@ -1,8 +1,16 @@
 const express = require('express');
 const router = express.Router();
-const authMiddleware = require('../middlewares/auth');
+const authMiddleware = require('../middleware/auth');
 const testimonialController = require('../controllers/testimonialController');
 
 router.use(authMiddleware);
+
+router.post('/', testimonialController.createTestimonial);
+router.get('/', testimonialController.getTestimonials);
+router.get('/:testimonialId', testimonialController.getTestimonialById);
+router.put('/:testimonialId', testimonialController.updateTestimonialById);
+router.patch('/:testimonialId/status', testimonialController.testimonialTransition);
+router.delete('/:testimonialId', testimonialController.deleteTestimonial);
+router.post('/:testimonialId/share', testimonialController.shareTestimonial);
 
 module.exports = router;

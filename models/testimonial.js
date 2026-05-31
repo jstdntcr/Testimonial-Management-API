@@ -27,5 +27,4 @@ testimonialSchema.index({userId: 1});
 testimonialSchema.index({status: 1});
 testimonialSchema.index({userId: 1, isDeleted: 1});
 
-
 module.exports = mongoose.model('Testimonial', testimonialSchema);
