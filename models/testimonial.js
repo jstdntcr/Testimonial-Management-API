@@ -3,7 +3,7 @@ const constants = require("../lib/constants");
 
 const testimonialSchema = new mongoose.Schema(
     {
-        testimonialId: {type: String, required: true},
+        testimonialId: {type: String, required: true, unique: true},
         userId: {type: String, required: true},
         customerName: {type: String, required: true},
         customerEmail: {type: String, required: false},

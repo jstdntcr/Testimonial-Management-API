@@ -3,7 +3,7 @@ const constants = require('../lib/constants');
 
 const testimonialSettingsSchema = new mongoose.Schema(
     {
-        userId: {type: Number, required: true},
+        userId: {type: Number, required: true, unique: true},
         isEnabled: {type: Boolean, required: false, default: false},
         defaultVideoLength: {type: Number, required: false, default: constants.defaultVideoLength},
         videoLengthOptions: {type: [Number], required: false, default: constants.videoLengthOptions},
