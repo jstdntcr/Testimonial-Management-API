@@ -399,6 +399,61 @@ const getTestimonialsWithFilters = async (req, res) => {
     }
 }
 
+const bulkTestimonialsTransition = async (req, res) => {
+    try {
+        const result = {
+            updated: 0,
+            failed: 0,
+            errors: []
+        };
+        const testimonialStatus = req.body.status;
+        const filteredTestimonialIds = req.body.testimonialIds.filter(
+            testimonial => (testimonial.userId === req.user.id && !testimonial.isDeleted)
+        );
+
+        for (const itemId of filteredTestimonialIds) {
+            const testimonial = await Testimonial.findOne({
+                testimonialId: itemId
+            });
+
+            if (!testimonial) {
+                result.failed++;
+                result.errors.push(`Testimonial with id ${itemId} not found`);
+                continue;
+            }
+
+            const currentStatus = testimonial.status;
+            const currentStatusIndex = constants.testimonialStatus.indexOf(currentStatus);
+            const newStatusIndex = constants.testimonialStatus.indexOf(testimonialStatus);
+
+            if (newStatusIndex - currentStatusIndex !== 1 || currentStatusIndex === constants.testimonialStatus.length - 1) {
+                result.failed++;
+                result.errors.push(`Testimonial with id ${itemId} cannot transit from ${currentStatus} to ${testimonialStatus}`);
+                continue;
+            }
+
+            const updates = { status: testimonialStatus };
+
+            if (testimonialStatus === 'shared') {
+                updates.sharedAt = new Date();
+            }
+
+            const updatedTestimonial = await Testimonial.findOneAndUpdate(
+                {testimonialId: itemId},
+                { $set: updates},
+                {new: true}
+            );
+
+            result.updated++;
+        };
+
+        return res.status(200).json({code: 200, status: 'success', message: 'Data updated', data: result});
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ code: 500, status: 'failure', message: 'Server error' });
+    }
+}
+
 module.exports = {createTestimonial, getTestimonials, getTestimonialById, updateTestimonialById, testimonialTransition,
     deleteTestimonial, shareTestimonial, getTestimonialSettings, createTestimonialSettings, getAnalytics,
-    getTestimonialsWithFilters};
+    getTestimonialsWithFilters, bulkTestimonialsTransition};
