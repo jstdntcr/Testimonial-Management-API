@@ -294,5 +294,57 @@ const createTestimonialSettings = async (req, res) => {
     }
 }
 
-module.exports = {createTestimonial, getTestimonials, getTestimonialById, updateTestimonialById,
-    testimonialTransition, deleteTestimonial, shareTestimonial, getTestimonialSettings, createTestimonialSettings};
+const getAnalytics = async (req, res) => {
+    try {
+        const filter = {
+            userId: req.user.userId,
+            isDeleted: false
+        }
+
+        if (req.query.startDate) {
+            filter.createdAt = {$gte: new Date(req.query.startDate)};
+        }
+
+        if (req.query.endDate) {
+            filter.createdAt = {
+                ...filter.createdAt,
+                $lte: new Date(req.query.endDate)
+            }
+        }
+
+        const totalTestimonials = await Testimonial.aggregate([
+            { $match: filter},
+            { $group: {_id: null, total: {$sum: 1}, avgRating: {$avg: '$rating'}}}
+        ]);
+
+        const testimonialsByStatus = await Testimonial.aggregate([
+            {$match: filter},
+            {$group: {_id: '$status', count: {$sum: 1}}}
+        ]);
+        const resultByStatus = {};
+        testimonialsByStatus.forEach((testimonial) => {
+            resultByStatus[testimonial._id] = testimonial.count
+        });
+
+        const result = {
+            overview: {
+                total: totalTestimonials[0].total || 0,
+                byStatus: resultByStatus,
+                averageRating: totalTestimonials[0].avgRating || 0,
+            },
+            period: {
+                startDate: req.query.startDate,
+                endDate: req.query.endDate,
+            }
+        };
+
+        res.status(200).json({code: 200, status: 'success', message: 'Data retrieved successfully',
+        data: result});
+    } catch (err) {
+        console.log(err);
+        return res.status(500).json({ code: 500, status: 'failure', message: 'Server error' });
+    }
+}
+
+module.exports = {createTestimonial, getTestimonials, getTestimonialById, updateTestimonialById, testimonialTransition,
+    deleteTestimonial, shareTestimonial, getTestimonialSettings, createTestimonialSettings, getAnalytics};
