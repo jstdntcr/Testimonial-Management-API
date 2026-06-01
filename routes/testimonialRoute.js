@@ -12,5 +12,7 @@ router.put('/:testimonialId', testimonialController.updateTestimonialById);
 router.patch('/:testimonialId/status', testimonialController.testimonialTransition);
 router.delete('/:testimonialId', testimonialController.deleteTestimonial);
 router.post('/:testimonialId/share', testimonialController.shareTestimonial);
+router.get('/settings', testimonialController.getTestimonialSettings);
+router.post('/settings', testimonialController.createTestimonialSettings)
 
 module.exports = router;

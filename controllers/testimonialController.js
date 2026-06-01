@@ -1,4 +1,5 @@
 const Testimonial = require('../models/Testimonial');
+const TestimonialSettings = require('../models/TestimonialSettings');
 const utils = require('../lib/utils');
 const constants = require('../lib/constants');
 
@@ -31,10 +32,10 @@ const createTestimonial = async (req, res) => {
             sharedChannels,
         });
 
-        res.json({ code: 201, status: 'success', data: testimonial.toObject() });
+        return res.json({ code: 201, status: 'success', data: testimonial.toObject() });
     } catch (err) {
         console.log(err);
-        res.status(500).json({ code: 500, status: 'failure', message: 'Server error' });
+        return res.status(500).json({ code: 500, status: 'failure', message: 'Server error' });
     }
 }
 
@@ -60,11 +61,11 @@ const getTestimonials = async (req, res) => {
 
         const result = testimonials.map(testimonial => testimonial.toObject());
 
-        res.status(200).json({code: 200, status: 'success', message: 'Data retrieved successfully',
+        return res.status(200).json({code: 200, status: 'success', message: 'Data retrieved successfully',
             data: result, pagination: {total, page, limit, pages}});
     } catch (err) {
         console.log(err);
-        res.status(500).json({ code: 500, status: 'failure', message: 'Server error' });
+        return res.status(500).json({ code: 500, status: 'failure', message: 'Server error' });
     }
 }
 
@@ -78,10 +79,14 @@ const getTestimonialById = async (req, res) => {
             isDeleted: false
         });
 
-        res.status(200).json({code: 200, status: 'success', data: testimonial.toObject()});
+        if (!testimonial) {
+            return res.status(404).json({ code: 404, status: 'failure', message: 'Testimonial not found' });
+        }
+
+        return res.status(200).json({code: 200, status: 'success', data: testimonial.toObject()});
     } catch (err) {
         console.log(err);
-        res.status(500).json({ code: 500, status: 'failure', message: 'Server error' });
+        return res.status(500).json({ code: 500, status: 'failure', message: 'Server error' });
     }
 }
 
@@ -123,10 +128,10 @@ const updateTestimonialById = async (req, res) => {
             return res.status(404).json({ code: 404, status: 'failure', message: 'Testimonial not found' });
         }
 
-        res.status(200).json({code: 200, status: 'success', data: updatedTestimonial.toObject()});
+        return res.status(200).json({code: 200, status: 'success', data: updatedTestimonial.toObject()});
     } catch (err) {
         console.log(err);
-        res.status(500).json({ code: 500, status: 'failure', message: 'Server error' });
+        return res.status(500).json({ code: 500, status: 'failure', message: 'Server error' });
     }
 }
 
@@ -166,10 +171,10 @@ const testimonialTransition = async (req, res) => {
             {new: true}
         );
 
-
+        return res.status(200).json({ code: 200, status: 'success', data: updatedTestimonial.toObject() });
     } catch (err) {
         console.log(err);
-        res.status(500).json({ code: 500, status: 'failure', message: 'Server error' });
+        return res.status(500).json({ code: 500, status: 'failure', message: 'Server error' });
     }
 }
 
@@ -195,10 +200,10 @@ const deleteTestimonial = async (req, res) => {
             return res.status(404).json({ code: 404, status: 'failure', message: 'Testimonial not found' });
         }
 
-        res.status(200).json({code: 200, status: 'success', message: 'Testimonial deleted successfully' });
+        return res.status(200).json({code: 200, status: 'success', message: 'Testimonial deleted successfully' });
     } catch (err) {
         console.log(err);
-        res.status(500).json({ code: 500, status: 'failure', message: 'Server error' });
+        return res.status(500).json({ code: 500, status: 'failure', message: 'Server error' });
     }
 }
 
@@ -240,12 +245,54 @@ const shareTestimonial = async (req, res) => {
             { new: true}
         );
 
-        res.status(200).json({ code: 200, status: 'success', data: updatedTestimonial.toObject() });
+        return res.status(200).json({ code: 200, status: 'success', data: updatedTestimonial.toObject() });
     } catch (err) {
         console.log(err);
-        res.status(500).json({ code: 500, status: 'failure', message: 'Server error' });
+        return res.status(500).json({ code: 500, status: 'failure', message: 'Server error' });
+    }
+}
+
+const getTestimonialSettings = async (req, res) => {
+    try {
+        const testimonialSettings = await TestimonialSettings.findOne({userId: req.user.userId});
+
+        if (!testimonialSettings) {
+            return res.status(200).json({code: 200, status: 'success', message: 'No testimonial settings for this user', data: null});
+        }
+
+        return res.status(200).json({code: 200, status: 'success', data: testimonialSettings.toObject()});
+    } catch (err) {
+        console.log(err);
+        return res.status(500).json({ code: 500, status: 'failure', message: 'Server error' });
+    }
+}
+
+const createTestimonialSettings = async (req, res) => {
+    try {
+        const { isEnabled, defaultVideoLength, videoLengthOptions,
+            questionnaire, sendingOptions, thankYouMessage, contactConsent } = req.body;
+
+        const updates = {};
+        if (isEnabled !== undefined) updates.isEnabled = isEnabled;
+        if (defaultVideoLength !== undefined) updates.defaultVideoLength = defaultVideoLength;
+        if (videoLengthOptions !== undefined) updates.videoLengthOptions = videoLengthOptions;
+        if (questionnaire !== undefined) updates.questionnaire = questionnaire;
+        if (sendingOptions !== undefined) updates.sendingOptions = sendingOptions;
+        if (thankYouMessage !== undefined) updates.thankYouMessage = thankYouMessage;
+        if (contactConsent !== undefined) updates.contactConsent = contactConsent;
+
+        const settings = await TestimonialSettings.findOneAndUpdate(
+            { userId: req.user.userId },
+            { $set: updates },
+            { new: true, upsert: true }
+        );
+
+        return res.status(200).json({ code: 200, status: 'success', data: settings.toObject() });
+    } catch (err) {
+        console.log(err);
+        return res.status(500).json({ code: 500, status: 'failure', message: 'Server error' });
     }
 }
 
 module.exports = {createTestimonial, getTestimonials, getTestimonialById, updateTestimonialById,
-    testimonialTransition, deleteTestimonial, shareTestimonial};
+    testimonialTransition, deleteTestimonial, shareTestimonial, getTestimonialSettings, createTestimonialSettings};
