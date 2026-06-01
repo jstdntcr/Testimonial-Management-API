@@ -73,7 +73,7 @@ const loginUser = async (req, res) => {
 
             const {password, ...safeUser} = user.toObject();
 
-            return res.status(201).json({code: 201, status: 'success', message: 'Login successfully',
+            return res.status(200).json({code: 200, status: 'success', message: 'Login successfully',
                 data: {userId: safeUser.userId, email: safeUser.email, token}});
         } else {
             return res.status(401).json({code: 401, status: 'failure', message: 'Invalid Credentials'});

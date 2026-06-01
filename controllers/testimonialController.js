@@ -1,5 +1,5 @@
-const Testimonial = require('../models/Testimonial');
-const TestimonialSettings = require('../models/TestimonialSettings');
+const Testimonial = require('../models/testimonial');
+const TestimonialSettings = require('../models/testimonialSettings');
 const utils = require('../lib/utils');
 const constants = require('../lib/constants');
 
@@ -33,7 +33,8 @@ const createTestimonial = async (req, res) => {
             sharedChannels,
         });
 
-        return res.status(201).json({ code: 201, status: 'success', data: testimonial.toObject() });
+        return res.status(201).json({ code: 201, status: 'success', message: 'Testimonial successfully created' ,
+            data: testimonial.toObject() });
     } catch (err) {
         console.error(err);
         return res.status(500).json({ code: 500, status: 'failure', message: 'Server error' });
@@ -76,12 +77,15 @@ const getTestimonialById = async (req, res) => {
 
         const testimonial = await Testimonial.findOne({
             testimonialId: testimonialId,
-            userId: parseInt(req.user.userId),
             isDeleted: false
         });
 
         if (!testimonial) {
             return res.status(404).json({ code: 404, status: 'failure', message: 'Testimonial not found' });
+        }
+
+        if (testimonial.userId !== parseInt(req.user.userId)) {
+            return res.status(403).json({ code: 403, status: 'failure', message: 'Access forbidden' });
         }
 
         return res.status(200).json({code: 200, status: 'success', message: 'Data received successfully',
@@ -121,15 +125,21 @@ const updateTestimonialById = async (req, res) => {
         if (consentGiven !== undefined) updates.consentGiven = consentGiven;
         if (sharedChannels !== undefined) updates.sharedChannels = sharedChannels;
 
+        const existingTestimonial = await Testimonial.findOne({ testimonialId: testimonialId, isDeleted: false });
+
+        if (!existingTestimonial) {
+            return res.status(404).json({ code: 404, status: 'failure', message: 'Testimonial not found' });
+        }
+
+        if (existingTestimonial.userId !== parseInt(req.user.userId)) {
+            return res.status(403).json({ code: 403, status: 'failure', message: 'Access forbidden' });
+        }
+
         const updatedTestimonial = await Testimonial.findOneAndUpdate(
-            {testimonialId: testimonialId, userId: parseInt(req.user.userId), isDeleted: false},
+            {testimonialId: testimonialId, isDeleted: false},
             { $set: updates },
             {returnDocument: 'after'}
         );
-
-        if (!updatedTestimonial) {
-            return res.status(404).json({ code: 404, status: 'failure', message: 'Testimonial not found' });
-        }
 
         return res.status(200).json({code: 200, status: 'success', message: 'Testimonial successfully updated',
             data: updatedTestimonial.toObject()});
@@ -142,11 +152,14 @@ const updateTestimonialById = async (req, res) => {
 const testimonialTransition = async (req, res) => {
     try {
         const {testimonialId} = req.params;
-        const {testimonialStatus} = req.body;
+        const {status} = req.body;
+
+        if (!status) {
+            return res.status(400).json({ code: 400, status: 'failure', message: 'Status is required' });
+        }
 
         const testimonial = await Testimonial.findOne({
             testimonialId: testimonialId,
-            userId: parseInt(req.user.userId),
             isDeleted: false
         });
 
@@ -154,18 +167,22 @@ const testimonialTransition = async (req, res) => {
             return res.status(404).json({ code: 404, status: 'failure', message: 'Testimonial not found' });
         }
 
+        if (testimonial.userId !== parseInt(req.user.userId)) {
+            return res.status(403).json({ code: 403, status: 'failure', message: 'Access forbidden' });
+        }
+
         const currentStatus = testimonial.status;
         const currentStatusIndex = constants.testimonialStatus.indexOf(currentStatus);
-        const newStatusIndex = constants.testimonialStatus.indexOf(testimonialStatus);
+        const newStatusIndex = constants.testimonialStatus.indexOf(status);
 
         if (newStatusIndex - currentStatusIndex !== 1 || currentStatusIndex === constants.testimonialStatus.length - 1) {
             return res.status(400).json({code: 400, status: 'failure',
-                message: `Cannot transition from ${currentStatus} to ${testimonialStatus}`});
+                message: `Cannot transition from ${currentStatus} to ${status}`});
         }
 
-        const updates = { status: testimonialStatus };
+        const updates = { status: status };
 
-        if (testimonialStatus === 'shared') {
+        if (status === 'shared') {
             updates.sharedAt = new Date();
         }
 
@@ -192,18 +209,20 @@ const deleteTestimonial = async (req, res) => {
             deletedAt: new Date()
         }
 
-        const deletedTestimonial = await Testimonial.findOneAndUpdate({
-            testimonialId: testimonialId,
-            userId: parseInt(req.user.userId),
-            isDeleted: false
-        },
-            { $set: updates},
-            {returnDocument: 'after'}
-        );
+        const existingTestimonial = await Testimonial.findOne({ testimonialId: testimonialId, isDeleted: false });
 
-        if (!deletedTestimonial) {
+        if (!existingTestimonial) {
             return res.status(404).json({ code: 404, status: 'failure', message: 'Testimonial not found' });
         }
+
+        if (existingTestimonial.userId !== parseInt(req.user.userId)) {
+            return res.status(403).json({ code: 403, status: 'failure', message: 'Access forbidden' });
+        }
+
+        await Testimonial.findOneAndUpdate(
+            { testimonialId: testimonialId, isDeleted: false },
+            { $set: updates }
+        );
 
         return res.status(200).json({code: 200, status: 'success', message: 'Testimonial deleted successfully' });
     } catch (err) {
@@ -217,6 +236,10 @@ const shareTestimonial = async (req, res) => {
         const {testimonialId} = req.params;
         const {channels} = req.body;
 
+        if (!channels || !Array.isArray(channels)) {
+            return res.status(400).json({ code: 400, status: 'failure', message: 'channels must be an array' });
+        }
+
         const invalidChannels = channels.filter(channel => !constants.channels.includes(channel));
         if (invalidChannels.length > 0) {
             return res.status(400).json({ code: 400, status: 'failure',
@@ -226,7 +249,6 @@ const shareTestimonial = async (req, res) => {
 
         const testimonial = await Testimonial.findOne({
             testimonialId: testimonialId,
-            userId: parseInt(req.user.userId),
             isDeleted: false
         });
 
@@ -234,11 +256,24 @@ const shareTestimonial = async (req, res) => {
             return res.status(404).json({ code: 404, status: 'failure', message: 'Testimonial not found' });
         }
 
-        const resultChannels = new Set([...testimonial.sharedChannels, ...channels]);
+        if (testimonial.userId !== parseInt(req.user.userId)) {
+            return res.status(403).json({ code: 403, status: 'failure', message: 'Access forbidden' });
+        }
+
+        if (!['completed', 'shared'].includes(testimonial.status)) {
+            return res.status(400).json({ code: 400, status: 'failure',
+                message: `Cannot share a testimonial with status '${testimonial.status}'` });
+        }
+
+        const resultChannels = new Set([...(testimonial.sharedChannels || []), ...channels]);
+
         const updates = {
             sharedChannels: [...resultChannels],
-            sharedAt: new Date()
         };
+
+        if (!testimonial.sharedAt) {
+            updates.sharedAt = new Date();
+        }
 
         if (testimonial.status === 'completed') {
             updates.status = 'shared';
@@ -337,9 +372,9 @@ const getAnalytics = async (req, res) => {
 
         const result = {
             overview: {
-                total: totalTestimonials[0].total || 0,
+                total: totalTestimonials[0] ? totalTestimonials[0].total : 0,
                 byStatus: resultByStatus,
-                averageRating: totalTestimonials[0].avgRating || 0,
+                averageRating: totalTestimonials[0] ? totalTestimonials[0].avgRating : 0,
             },
             period: {
                 startDate: req.query.startDate,

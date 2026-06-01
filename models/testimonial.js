@@ -15,7 +15,7 @@ const testimonialSchema = new mongoose.Schema(
         status: {type: String, required: true, enum: constants.testimonialStatus,  default: constants.testimonialStatus[0]},
         consentGiven: {type: Boolean, required: false, default: false},
         sharedAt: {type: Date, required: false},
-        sharedChannels: {type: [String], required: false},
+        sharedChannels: {type: [String], required: false, default: []},
         isDeleted: {type: Boolean, required: false, default: false},
         deletedAt: {type: Date, required: false},
     },

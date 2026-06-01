@@ -23,12 +23,12 @@ beforeAll(async () => {
     });
 
     token = res.body.data.token;
-});
+}, 30000);
 
 afterAll(async () => {
     await mongoose.disconnect();
     await mongoServer.stop();
-});
+}, 15000);
 
 describe('POST /api/testimonials', () => {
     test('создаёт отзыв с валидными данными', async () => {
@@ -136,7 +136,7 @@ describe('PATCH /api/testimonials/:testimonialId/status', () => {
         const res = await request(app)
             .patch(`/api/testimonials/${testimonialId}/status`)
             .set('Authorization', `Bearer ${token}`)
-            .send({ testimonialStatus: 'recording' });
+            .send({ status: 'recording' });
 
         expect(res.status).toBe(200);
         expect(res.body.data.status).toBe('recording');
@@ -154,7 +154,7 @@ describe('PATCH /api/testimonials/:testimonialId/status', () => {
         const res = await request(app)
             .patch(`/api/testimonials/${id}/status`)
             .set('Authorization', `Bearer ${token}`)
-            .send({ testimonialStatus: 'completed' });
+            .send({ status: 'completed' });
 
         expect(res.status).toBe(400);
         expect(res.body.message).toMatch(/Cannot transition/);
@@ -169,7 +169,7 @@ describe('PATCH /api/testimonials/:testimonialId/status', () => {
             await request(app)
                 .patch(`/api/testimonials/${currentId}/status`)
                 .set('Authorization', `Bearer ${token}`)
-                .send({ testimonialStatus: status });
+                .send({ status: status });
         }
 
         const res = await request(app)
