@@ -354,5 +354,51 @@ const getAnalytics = async (req, res) => {
     }
 }
 
+const getTestimonialsWithFilters = async (req, res) => {
+    try {
+        const {search, createdAfter, createdBefore, minRating, maxRating} = req.query;
+
+        const filter = {userId: req.user.id, isDeleted: false};
+
+        if (search) filter.$or = [
+            {customerName: {$regex: search, $options: 'i'}},
+            {text: {$regex: search, $options: 'i'}},
+        ];
+
+        if (createdAfter || createdBefore) {
+            filter.createdAt = {};
+            if (createdAfter) filter.createdAt.$gte = new Date(createdAfter);
+            if (createdBefore) filter.createdAt.$lte = new Date(createdBefore);
+        }
+
+        if (minRating || maxRating) {
+            filter.rating = {};
+            if (minRating) filter.rating.$gte = minRating;
+            if (maxRating) filter.rating.$lte = maxRating;
+        }
+
+        const page = parseInt(req.query.page) || constants.page;
+        const limit = parseInt(req.query.limit) || constants.limit;
+        const skip = (page - 1) * limit;
+        const sort = req.query.sort || constants.sortingField;
+
+        const total = await Testimonial.countDocuments(filter);
+        const pages = Math.ceil(total / limit);
+        const testimonials = await Testimonial.find(filter)
+            .skip(skip)
+            .limit(limit)
+            .sort({ [sort]: -1 });
+
+        const result = testimonials.map(testimonial => testimonial.toObject());
+
+        return res.status(200).json({code: 200, status: 'success', message: 'Data retrieved successfully',
+            data: result, pagination: {total, page, limit, pages}});
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ code: 500, status: 'failure', message: 'Server error' });
+    }
+}
+
 module.exports = {createTestimonial, getTestimonials, getTestimonialById, updateTestimonialById, testimonialTransition,
-    deleteTestimonial, shareTestimonial, getTestimonialSettings, createTestimonialSettings, getAnalytics};
+    deleteTestimonial, shareTestimonial, getTestimonialSettings, createTestimonialSettings, getAnalytics,
+    getTestimonialsWithFilters};

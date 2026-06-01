@@ -8,6 +8,7 @@ router.use(authMiddleware);
 router.get('/settings', testimonialController.getTestimonialSettings);
 router.post('/settings', testimonialController.createTestimonialSettings)
 router.get('/analytics', testimonialController.getAnalytics);
+router.get('/search', testimonialController.getTestimonialsWithFilters);
 router.post('/', testimonialController.createTestimonial);
 router.get('/', testimonialController.getTestimonials);
 router.get('/:testimonialId', testimonialController.getTestimonialById);
