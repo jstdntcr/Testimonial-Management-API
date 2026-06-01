@@ -5,7 +5,7 @@ const { v4: uuidv4 } = require('uuid');
 const testimonialSchema = new mongoose.Schema(
     {
         testimonialId: {type: String, unique: true, default: uuidv4},
-        userId: {type: String, required: true},
+        userId: {type: Number, required: true},
         customerName: {type: String, required: true},
         customerEmail: {type: String, required: false},
         customerPhone: {type: String, required: false},
@@ -16,7 +16,7 @@ const testimonialSchema = new mongoose.Schema(
         consentGiven: {type: Boolean, required: false, default: false},
         sharedAt: {type: Date, required: false},
         sharedChannels: {type: [String], required: false},
-        isDeleted: {type: Boolean, required: false},
+        isDeleted: {type: Boolean, required: false, default: false},
         deletedAt: {type: Date, required: false},
     },
     {timestamps: true}

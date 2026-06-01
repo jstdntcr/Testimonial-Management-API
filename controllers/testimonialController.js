@@ -9,12 +9,12 @@ const createTestimonial = async (req, res) => {
         videoUrl, rating, text, consentGiven, sharedChannels} = req.body;
 
         const customerEmailResult = customerEmail ? utils.validateEmail(customerEmail) : { valid: true };
-        const customerNameResult = utils.validateName(customerName);
+        const customerNameResult = customerName ? utils.validateName(customerName): { valid: false, errors: ['CustomerName обязательно'] };
 
         const errors = {
             ...(customerEmailResult.valid ? {} : { customerEmail: customerEmailResult.errors }),
             ...(customerNameResult.valid ? {} : { customerName: customerNameResult.errors }),
-            ...(rating >= 1 && rating <= 5 ? {} : {rating: 'Rating must be between 1 and 5'})
+            ...(rating === undefined || (rating >= 1 && rating <= 5) ? {} : { rating: 'Rating must be between 1 and 5' })
         };
 
         if (Object.keys(errors).length > 0) {
@@ -22,18 +22,18 @@ const createTestimonial = async (req, res) => {
         }
 
         const testimonial = await Testimonial.create({
-            userId: req.user.userId,
+            userId: parseInt(req.user.userId),
             customerName,
             customerEmail,
             customerPhone,
             videoUrl,
-            rating: parseInt(rating),
+            rating: rating !== undefined ? parseInt(rating) : undefined,
             text,
             consentGiven,
             sharedChannels,
         });
 
-        return res.json({ code: 201, status: 'success', data: testimonial.toObject() });
+        return res.status(201).json({ code: 201, status: 'success', data: testimonial.toObject() });
     } catch (err) {
         console.error(err);
         return res.status(500).json({ code: 500, status: 'failure', message: 'Server error' });
@@ -42,7 +42,7 @@ const createTestimonial = async (req, res) => {
 
 const getTestimonials = async (req, res) => {
     try {
-        const filter = { userId: req.user.userId, isDeleted: false };
+        const filter = { userId: parseInt(req.user.userId), isDeleted: false };
 
         if (req.query.status) {
             filter.status = req.query.status;
@@ -76,7 +76,7 @@ const getTestimonialById = async (req, res) => {
 
         const testimonial = await Testimonial.findOne({
             testimonialId: testimonialId,
-            userId: req.user.userId,
+            userId: parseInt(req.user.userId),
             isDeleted: false
         });
 
@@ -104,6 +104,7 @@ const updateTestimonialById = async (req, res) => {
         const errors = {
             ...(customerEmailResult.valid ? {} : { customerEmail: customerEmailResult.errors }),
             ...(customerNameResult.valid ? {} : { customerName: customerNameResult.errors }),
+            ...(rating === undefined || (rating >= 1 && rating <= 5) ? {} : { rating: 'Rating must be between 1 and 5' })
         };
 
         if (Object.keys(errors).length > 0) {
@@ -121,9 +122,9 @@ const updateTestimonialById = async (req, res) => {
         if (sharedChannels !== undefined) updates.sharedChannels = sharedChannels;
 
         const updatedTestimonial = await Testimonial.findOneAndUpdate(
-            {testimonialId: testimonialId, userId: req.user.userId, isDeleted: false},
+            {testimonialId: testimonialId, userId: parseInt(req.user.userId), isDeleted: false},
             { $set: updates },
-            {new: true}
+            {returnDocument: 'after'}
         );
 
         if (!updatedTestimonial) {
@@ -145,7 +146,7 @@ const testimonialTransition = async (req, res) => {
 
         const testimonial = await Testimonial.findOne({
             testimonialId: testimonialId,
-            userId: req.user.userId,
+            userId: parseInt(req.user.userId),
             isDeleted: false
         });
 
@@ -171,7 +172,7 @@ const testimonialTransition = async (req, res) => {
         const updatedTestimonial = await Testimonial.findOneAndUpdate(
             {testimonialId: testimonialId},
             { $set: updates},
-            {new: true}
+            {returnDocument: 'after'}
         );
 
         return res.status(200).json({ code: 200, status: 'success', message: 'Testimonial status successfully updated',
@@ -193,11 +194,11 @@ const deleteTestimonial = async (req, res) => {
 
         const deletedTestimonial = await Testimonial.findOneAndUpdate({
             testimonialId: testimonialId,
-            userId: req.user.userId,
+            userId: parseInt(req.user.userId),
             isDeleted: false
         },
             { $set: updates},
-            {new: true}
+            {returnDocument: 'after'}
         );
 
         if (!deletedTestimonial) {
@@ -225,7 +226,7 @@ const shareTestimonial = async (req, res) => {
 
         const testimonial = await Testimonial.findOne({
             testimonialId: testimonialId,
-            userId: req.user.userId,
+            userId: parseInt(req.user.userId),
             isDeleted: false
         });
 
@@ -246,7 +247,7 @@ const shareTestimonial = async (req, res) => {
         const updatedTestimonial = await Testimonial.findOneAndUpdate(
             {testimonialId: testimonialId},
             { $set: updates},
-            { new: true}
+            {returnDocument: 'after'}
         );
 
         return res.status(200).json({ code: 200, status: 'success', message: "Testimonial successfully shared",
@@ -289,7 +290,7 @@ const createTestimonialSettings = async (req, res) => {
         if (contactConsent !== undefined) updates.contactConsent = contactConsent;
 
         const settings = await TestimonialSettings.findOneAndUpdate(
-            { userId: req.user.userId },
+            { userId: parseInt(req.user.userId), },
             { $set: updates },
             { new: true, upsert: true }
         );
@@ -305,7 +306,7 @@ const createTestimonialSettings = async (req, res) => {
 const getAnalytics = async (req, res) => {
     try {
         const filter = {
-            userId: req.user.userId,
+            userId: parseInt(req.user.userId),
             isDeleted: false
         }
 
@@ -358,7 +359,7 @@ const getTestimonialsWithFilters = async (req, res) => {
     try {
         const {search, createdAfter, createdBefore, minRating, maxRating} = req.query;
 
-        const filter = {userId: req.user.id, isDeleted: false};
+        const filter = {userId: parseInt(req.user.userId), isDeleted: false};
 
         if (search) filter.$or = [
             {customerName: {$regex: search, $options: 'i'}},
@@ -406,14 +407,13 @@ const bulkTestimonialsTransition = async (req, res) => {
             failed: 0,
             errors: []
         };
-        const testimonialStatus = req.body.status;
-        const filteredTestimonialIds = req.body.testimonialIds.filter(
-            testimonial => (testimonial.userId === req.user.id && !testimonial.isDeleted)
-        );
+        const { testimonialIds, status: testimonialStatus } = req.body;
 
-        for (const itemId of filteredTestimonialIds) {
+        for (const itemId of testimonialIds) {
             const testimonial = await Testimonial.findOne({
-                testimonialId: itemId
+                testimonialId: itemId,
+                userId: parseInt(req.user.userId), // ← проверка владельца здесь
+                isDeleted: false,
             });
 
             if (!testimonial) {
@@ -441,7 +441,7 @@ const bulkTestimonialsTransition = async (req, res) => {
             const updatedTestimonial = await Testimonial.findOneAndUpdate(
                 {testimonialId: itemId},
                 { $set: updates},
-                {new: true}
+                {returnDocument: 'after'}
             );
 
             result.updated++;
@@ -458,7 +458,7 @@ const exportTestimonials = async (req, res) => {
     try {
         const {search, createdAfter, createdBefore, minRating, maxRating} = req.query;
 
-        const filter = {userId: req.user.userId, isDeleted: false};
+        const filter = {userId: parseInt(req.user.userId), isDeleted: false};
 
         if (search) filter.$or = [
             {customerName: {$regex: search, $options: 'i'}},

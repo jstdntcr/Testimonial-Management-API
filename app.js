@@ -1,9 +1,6 @@
 require('dotenv').config();
 
 const mongoose = require('mongoose');
-mongoose.connect(process.env.MONGODB_URI)
-    .then(() => console.log('MongoDB connected'))
-    .catch(err => console.error('MongoDB error:', err));
 
 const express = require('express');
 const app = express();
@@ -20,4 +17,13 @@ app.get('/ping', (req, res) => {
     res.json({ message: 'pong' });
 });
 
-app.listen(port, () => console.log(`Listening http://localhost:${port}`));
+if (require.main === module) {
+    mongoose.connect(process.env.MONGODB_URI)
+        .then(() => {
+            console.log('MongoDB connected');
+            app.listen(port, () => console.log(`Listening http://localhost:${port}`));
+        })
+        .catch(err => console.error('MongoDB error:', err));
+}
+
+module.exports = app;
