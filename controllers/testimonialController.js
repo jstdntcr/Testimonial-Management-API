@@ -14,6 +14,7 @@ const createTestimonial = async (req, res) => {
         const errors = {
             ...(customerEmailResult.valid ? {} : { customerEmail: customerEmailResult.errors }),
             ...(customerNameResult.valid ? {} : { customerName: customerNameResult.errors }),
+            ...(rating >= 1 && rating <= 5 ? {} : {rating: 'Rating must be between 1 and 5'})
         };
 
         if (Object.keys(errors).length > 0) {
@@ -34,7 +35,7 @@ const createTestimonial = async (req, res) => {
 
         return res.json({ code: 201, status: 'success', data: testimonial.toObject() });
     } catch (err) {
-        console.log(err);
+        console.error(err);
         return res.status(500).json({ code: 500, status: 'failure', message: 'Server error' });
     }
 }
@@ -64,7 +65,7 @@ const getTestimonials = async (req, res) => {
         return res.status(200).json({code: 200, status: 'success', message: 'Data retrieved successfully',
             data: result, pagination: {total, page, limit, pages}});
     } catch (err) {
-        console.log(err);
+        console.error(err);
         return res.status(500).json({ code: 500, status: 'failure', message: 'Server error' });
     }
 }
@@ -86,7 +87,7 @@ const getTestimonialById = async (req, res) => {
         return res.status(200).json({code: 200, status: 'success', message: 'Data received successfully',
             data: testimonial.toObject()});
     } catch (err) {
-        console.log(err);
+        console.error(err);
         return res.status(500).json({ code: 500, status: 'failure', message: 'Server error' });
     }
 }
@@ -132,7 +133,7 @@ const updateTestimonialById = async (req, res) => {
         return res.status(200).json({code: 200, status: 'success', message: 'Testimonial successfully updated',
             data: updatedTestimonial.toObject()});
     } catch (err) {
-        console.log(err);
+        console.error(err);
         return res.status(500).json({ code: 500, status: 'failure', message: 'Server error' });
     }
 }
@@ -176,7 +177,7 @@ const testimonialTransition = async (req, res) => {
         return res.status(200).json({ code: 200, status: 'success', message: 'Testimonial status successfully updated',
             data: updatedTestimonial.toObject() });
     } catch (err) {
-        console.log(err);
+        console.error(err);
         return res.status(500).json({ code: 500, status: 'failure', message: 'Server error' });
     }
 }
@@ -205,7 +206,7 @@ const deleteTestimonial = async (req, res) => {
 
         return res.status(200).json({code: 200, status: 'success', message: 'Testimonial deleted successfully' });
     } catch (err) {
-        console.log(err);
+        console.error(err);
         return res.status(500).json({ code: 500, status: 'failure', message: 'Server error' });
     }
 }
@@ -251,7 +252,7 @@ const shareTestimonial = async (req, res) => {
         return res.status(200).json({ code: 200, status: 'success', message: "Testimonial successfully shared",
             data: updatedTestimonial.toObject() });
     } catch (err) {
-        console.log(err);
+        console.error(err);
         return res.status(500).json({ code: 500, status: 'failure', message: 'Server error' });
     }
 }
@@ -268,7 +269,7 @@ const getTestimonialSettings = async (req, res) => {
         return res.status(200).json({code: 200, status: 'success', message: 'Testimonial settings retrieved successfully',
             data: testimonialSettings.toObject()});
     } catch (err) {
-        console.log(err);
+        console.error(err);
         return res.status(500).json({ code: 500, status: 'failure', message: 'Server error' });
     }
 }
@@ -296,7 +297,7 @@ const createTestimonialSettings = async (req, res) => {
         return res.status(200).json({ code: 200, status: 'success', message: 'Testimonial settings successfully created',
             data: settings.toObject() });
     } catch (err) {
-        console.log(err);
+        console.error(err);
         return res.status(500).json({ code: 500, status: 'failure', message: 'Server error' });
     }
 }
@@ -348,7 +349,7 @@ const getAnalytics = async (req, res) => {
         res.status(200).json({code: 200, status: 'success', message: 'Data retrieved successfully',
         data: result});
     } catch (err) {
-        console.log(err);
+        console.error(err);
         return res.status(500).json({ code: 500, status: 'failure', message: 'Server error' });
     }
 }

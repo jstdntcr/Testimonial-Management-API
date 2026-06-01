@@ -8,7 +8,7 @@ const registerUser = async (req, res) => {
 
         const existing = await User.findOne({email: email});
         if (existing) {
-            res.status(409).json({code: 409, status: "failure", message: "Email already exists"});
+            return res.status(409).json({code: 409, status: "failure", message: "Email already exists"});
         }
 
         const emailResult = utils.validateEmail(email);
@@ -39,11 +39,11 @@ const registerUser = async (req, res) => {
 
         const {password: _, ...safeUser} = user.toObject();
 
-        res.status(201).json({ code: 201, status: 'success', message: 'User registered successfully' ,
+        return res.status(201).json({ code: 201, status: 'success', message: 'User registered successfully' ,
             data: safeUser });
     } catch (err) {
-        console.log(err);
-        res.status(500).json({ code: 500, status: 'failure', message: 'Server error' });
+        console.error(err);
+        return res.status(500).json({ code: 500, status: 'failure', message: 'Server error' });
     }
 };
 
@@ -67,14 +67,14 @@ const loginUser = async (req, res) => {
 
             const {password, ...safeUser} = user.toObject();
 
-            res.status(201).json({code: 201, status: 'success', message: 'Login successfully',
+            return res.status(201).json({code: 201, status: 'success', message: 'Login successfully',
                 data: {userId: safeUser.userId, email: safeUser.email, token}});
         } else {
-            res.status(401).json({code: 401, status: 'failure', message: 'Invalid Credentials'});
+            return res.status(401).json({code: 401, status: 'failure', message: 'Invalid Credentials'});
         }
     } catch (err) {
-        console.log(err);
-        res.status(500).json({ code: 500, status: 'failure', message: 'Server error' });
+        console.error(err);
+        return res.status(500).json({ code: 500, status: 'failure', message: 'Server error' });
     }
 }
 
