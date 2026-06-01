@@ -10,7 +10,7 @@ describe('validateEmail', () => {
     test('email без @ - возвращаем ошибку', () => {
         const result = utils.validateEmail('userexample.com');
         expect(result.valid).toBe(false);
-        expect(result.errors).toContain('Некорректный email');
+        expect(result.errors).toContain('Invalid email format');
     });
 
     test('email без домена - возвращаем ошибку', () => {
@@ -34,25 +34,25 @@ describe('validatePassword', () => {
     test('короткий пароль - ошибка', () => {
         const result = utils.validatePassword('Ab1!');
         expect(result.valid).toBe(false);
-        expect(result.errors).toContain('Минимум 8 символов');
+        expect(result.errors).toContain('Minimum 8 characters');
     });
 
     test('нет заглавной буквы - ошибка', () => {
         const result = utils.validatePassword('mypass1!');
         expect(result.valid).toBe(false);
-        expect(result.errors).toContain('Минимум одна заглавная буква');
+        expect(result.errors).toContain('At least one uppercase letter');
     });
 
     test('нет цифры - ошибка', () => {
         const result = utils.validatePassword('MyPassword!');
         expect(result.valid).toBe(false);
-        expect(result.errors).toContain('Минимум одна цифра');
+        expect(result.errors).toContain('At least one digit');
     });
 
     test('нет спецсимвола - ошибка', () => {
         const result = utils.validatePassword('MyPassword1');
         expect(result.valid).toBe(false);
-        expect(result.errors).toContain('Минимум один специальный символ');
+        expect(result.errors).toContain('At least one special character');
     });
 
     test('несколько нарушений - возвращаем все ошибки', () => {
@@ -71,13 +71,13 @@ describe('validateName', () => {
     test('пустая строка - ошибка', () => {
         const result = utils.validateName('');
         expect(result.valid).toBe(false);
-        expect(result.errors).toContain('Название не может быть пустым');
+        expect(result.errors).toContain('Name cannot be empty');
     });
 
     test('один символ - ошибка', () => {
         const result = utils.validateName('J');
         expect(result.valid).toBe(false);
-        expect(result.errors).toContain('Минимум 2 символа');
+        expect(result.errors).toContain('Minimum 2 characters');
     });
 
     test('кириллица - валидна', () => {
@@ -88,7 +88,7 @@ describe('validateName', () => {
     test('недопустимые символы - ошибка', () => {
         const result = utils.validateName('Name@#$');
         expect(result.valid).toBe(false);
-        expect(result.errors).toContain('Недопустимые символы');
+        expect(result.errors).toContain('Invalid characters');
     });
 });
 

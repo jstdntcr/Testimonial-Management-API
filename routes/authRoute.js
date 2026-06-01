@@ -15,7 +15,7 @@ const loginLimiter = rateLimit({
     legacyHeaders: false
 });
 
-router.post("/register", loginLimiter, userController.registerUser);
-router.post("/login", loginLimiter, userController.loginUser);
+router.post('/register', loginLimiter, userController.registerUser);
+router.post('/login', loginLimiter, userController.loginUser);
 
 module.exports = router;

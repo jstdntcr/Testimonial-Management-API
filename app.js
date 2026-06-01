@@ -11,7 +11,7 @@ const testimonialRoute = require('./routes/testimonialRoute');
 
 app.use(express.json());
 app.use('/api/auth', userRoute);
-app.use('/api/testimonials', testimonialRoute)
+app.use('/api/testimonials', testimonialRoute);
 
 app.get('/ping', (req, res) => {
     res.json({ message: 'pong' });

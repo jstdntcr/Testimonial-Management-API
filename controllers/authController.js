@@ -6,11 +6,6 @@ const registerUser = async (req, res) => {
     try {
         const { email, password, businessName, role, isActive } = req.body;
 
-        const existing = await User.findOne({email: email});
-        if (existing) {
-            return res.status(409).json({code: 409, status: "failure", message: "Email already exists"});
-        }
-
         const emailResult = utils.validateEmail(email);
         const passwordResult = utils.validatePassword(password);
         const businessNameResult = utils.validateName(businessName);
@@ -22,7 +17,12 @@ const registerUser = async (req, res) => {
         };
 
         if (Object.keys(errors).length > 0) {
-            return res.status(400).json({ code: 400, status: 'failure', message: `Error occurred: ${errors}` });
+            return res.status(400).json({ code: 400, status: 'failure', message: `Error occurred: ${JSON.stringify(errors)}` });
+        }
+
+        const existing = await User.findOne({email: email});
+        if (existing) {
+            return res.status(409).json({code: 409, status: 'failure', message: 'Email already exists'});
         }
 
         const lastUser = await User.findOne().sort({ userId: -1 });
@@ -69,9 +69,9 @@ const loginUser = async (req, res) => {
                 {userId: user.userId, email: user.email},
                 process.env.JWT_SECRET,
                 {expiresIn: process.env.JWT_EXPIRY},
-            )
+            );
 
-            const {password, ...safeUser} = user.toObject();
+            const {password: _password, ...safeUser} = user.toObject();
 
             return res.status(200).json({code: 200, status: 'success', message: 'Login successfully',
                 data: {userId: safeUser.userId, email: safeUser.email, token}});
@@ -82,6 +82,6 @@ const loginUser = async (req, res) => {
         console.error(err);
         return res.status(500).json({ code: 500, status: 'failure', message: 'Server error' });
     }
-}
+};
 
 module.exports = {registerUser, loginUser};

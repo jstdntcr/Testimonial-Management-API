@@ -9,7 +9,7 @@ const createTestimonial = async (req, res) => {
         videoUrl, rating, text, consentGiven, sharedChannels} = req.body;
 
         const customerEmailResult = customerEmail ? utils.validateEmail(customerEmail) : { valid: true };
-        const customerNameResult = customerName ? utils.validateName(customerName): { valid: false, errors: ['CustomerName обязательно'] };
+        const customerNameResult = customerName ? utils.validateName(customerName): { valid: false, errors: ['customerName is required'] };
 
         const errors = {
             ...(customerEmailResult.valid ? {} : { customerEmail: customerEmailResult.errors }),
@@ -18,7 +18,8 @@ const createTestimonial = async (req, res) => {
         };
 
         if (Object.keys(errors).length > 0) {
-            return res.status(400).json({ code: 400, status: 'failure', message: `Error occurred: ${errors}` });
+            return res.status(400).json({ code: 400, status: 'failure',
+                message: `Error occurred: ${JSON.stringify(errors)}` });
         }
 
         const testimonial = await Testimonial.create({
@@ -33,13 +34,13 @@ const createTestimonial = async (req, res) => {
             sharedChannels,
         });
 
-        return res.status(201).json({ code: 201, status: 'success', message: 'Testimonial successfully created' ,
+        return res.status(201).json({ code: 201, status: 'success', message: 'Testimonial successfully created',
             data: testimonial.toObject() });
     } catch (err) {
         console.error(err);
         return res.status(500).json({ code: 500, status: 'failure', message: 'Server error' });
     }
-}
+};
 
 const getTestimonials = async (req, res) => {
     try {
@@ -69,7 +70,7 @@ const getTestimonials = async (req, res) => {
         console.error(err);
         return res.status(500).json({ code: 500, status: 'failure', message: 'Server error' });
     }
-}
+};
 
 const getTestimonialById = async (req, res) => {
     try {
@@ -94,7 +95,7 @@ const getTestimonialById = async (req, res) => {
         console.error(err);
         return res.status(500).json({ code: 500, status: 'failure', message: 'Server error' });
     }
-}
+};
 
 const updateTestimonialById = async (req, res) => {
     try {
@@ -112,7 +113,8 @@ const updateTestimonialById = async (req, res) => {
         };
 
         if (Object.keys(errors).length > 0) {
-            return res.status(400).json({ code: 400, status: 'failure', message: `Error occurred: ${errors}` });
+            return res.status(400).json({ code: 400, status: 'failure',
+                message: `Error occurred: ${JSON.stringify(errors)}` });
         }
 
         const updates = {};
@@ -147,7 +149,7 @@ const updateTestimonialById = async (req, res) => {
         console.error(err);
         return res.status(500).json({ code: 500, status: 'failure', message: 'Server error' });
     }
-}
+};
 
 const testimonialTransition = async (req, res) => {
     try {
@@ -198,7 +200,7 @@ const testimonialTransition = async (req, res) => {
         console.error(err);
         return res.status(500).json({ code: 500, status: 'failure', message: 'Server error' });
     }
-}
+};
 
 const deleteTestimonial = async (req, res) => {
     try {
@@ -207,7 +209,7 @@ const deleteTestimonial = async (req, res) => {
         const updates = {
             isDeleted: true,
             deletedAt: new Date()
-        }
+        };
 
         const existingTestimonial = await Testimonial.findOne({ testimonialId: testimonialId, isDeleted: false });
 
@@ -229,7 +231,7 @@ const deleteTestimonial = async (req, res) => {
         console.error(err);
         return res.status(500).json({ code: 500, status: 'failure', message: 'Server error' });
     }
-}
+};
 
 const shareTestimonial = async (req, res) => {
     try {
@@ -285,13 +287,13 @@ const shareTestimonial = async (req, res) => {
             {returnDocument: 'after'}
         );
 
-        return res.status(200).json({ code: 200, status: 'success', message: "Testimonial successfully shared",
+        return res.status(200).json({ code: 200, status: 'success', message: 'Testimonial successfully shared',
             data: updatedTestimonial.toObject() });
     } catch (err) {
         console.error(err);
         return res.status(500).json({ code: 500, status: 'failure', message: 'Server error' });
     }
-}
+};
 
 const getTestimonialSettings = async (req, res) => {
     try {
@@ -308,7 +310,7 @@ const getTestimonialSettings = async (req, res) => {
         console.error(err);
         return res.status(500).json({ code: 500, status: 'failure', message: 'Server error' });
     }
-}
+};
 
 const createTestimonialSettings = async (req, res) => {
     try {
@@ -336,14 +338,14 @@ const createTestimonialSettings = async (req, res) => {
         console.error(err);
         return res.status(500).json({ code: 500, status: 'failure', message: 'Server error' });
     }
-}
+};
 
 const getAnalytics = async (req, res) => {
     try {
         const filter = {
             userId: parseInt(req.user.userId),
             isDeleted: false
-        }
+        };
 
         if (req.query.startDate) {
             filter.createdAt = {$gte: new Date(req.query.startDate)};
@@ -353,7 +355,7 @@ const getAnalytics = async (req, res) => {
             filter.createdAt = {
                 ...filter.createdAt,
                 $lte: new Date(req.query.endDate)
-            }
+            };
         }
 
         const totalTestimonials = await Testimonial.aggregate([
@@ -367,7 +369,7 @@ const getAnalytics = async (req, res) => {
         ]);
         const resultByStatus = {};
         testimonialsByStatus.forEach((testimonial) => {
-            resultByStatus[testimonial._id] = testimonial.count
+            resultByStatus[testimonial._id] = testimonial.count;
         });
 
         const result = {
@@ -388,7 +390,7 @@ const getAnalytics = async (req, res) => {
         console.error(err);
         return res.status(500).json({ code: 500, status: 'failure', message: 'Server error' });
     }
-}
+};
 
 const getTestimonialsWithFilters = async (req, res) => {
     try {
@@ -433,7 +435,7 @@ const getTestimonialsWithFilters = async (req, res) => {
         console.error(err);
         return res.status(500).json({ code: 500, status: 'failure', message: 'Server error' });
     }
-}
+};
 
 const bulkTestimonialsTransition = async (req, res) => {
     try {
@@ -473,10 +475,9 @@ const bulkTestimonialsTransition = async (req, res) => {
                 updates.sharedAt = new Date();
             }
 
-            const updatedTestimonial = await Testimonial.findOneAndUpdate(
+            await Testimonial.findOneAndUpdate(
                 {testimonialId: itemId},
-                { $set: updates},
-                {returnDocument: 'after'}
+                { $set: updates}
             );
 
             result.updated++;
@@ -487,7 +488,7 @@ const bulkTestimonialsTransition = async (req, res) => {
         console.error(err);
         return res.status(500).json({ code: 500, status: 'failure', message: 'Server error' });
     }
-}
+};
 
 const exportTestimonials = async (req, res) => {
     try {
@@ -519,7 +520,7 @@ const exportTestimonials = async (req, res) => {
 
         const rows = testimonials.map(testimonial => {
             const { _id, __v, ...rest } = testimonial.toObject();
-            return Object.values(rest).map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',');
+            return headers.map(key => `"${String(rest[key] ?? '').replace(/"/g, '""')}"`).join(',');
         });
 
         const csv = [headers.join(','), ...rows].join('\n');
@@ -532,7 +533,7 @@ const exportTestimonials = async (req, res) => {
         console.error(err);
         return res.status(500).json({ code: 500, status: 'failure', message: 'Server error' });
     }
-}
+};
 
 module.exports = {createTestimonial, getTestimonials, getTestimonialById, updateTestimonialById, testimonialTransition,
     deleteTestimonial, shareTestimonial, getTestimonialSettings, createTestimonialSettings, getAnalytics,

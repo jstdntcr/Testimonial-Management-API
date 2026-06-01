@@ -6,7 +6,7 @@ const testimonialController = require('../controllers/testimonialController');
 router.use(authMiddleware);
 
 router.get('/settings', testimonialController.getTestimonialSettings);
-router.post('/settings', testimonialController.createTestimonialSettings)
+router.post('/settings', testimonialController.createTestimonialSettings);
 router.get('/analytics', testimonialController.getAnalytics);
 router.get('/search', testimonialController.getTestimonialsWithFilters);
 router.post('/bulk/status', testimonialController.bulkTestimonialsTransition);

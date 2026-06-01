@@ -143,7 +143,6 @@ describe('PATCH /api/testimonials/:testimonialId/status', () => {
     });
 
     test('невалидный переход из draft в completed - возвращаем 400', async () => {
-        // Создаём новый отзыв в статусе draft
         const create = await request(app)
             .post('/api/testimonials')
             .set('Authorization', `Bearer ${token}`)
@@ -161,19 +160,22 @@ describe('PATCH /api/testimonials/:testimonialId/status', () => {
     });
 
     test('переход в shared устанавливает sharedAt', async () => {
-        // Прогоняем через все статусы до completed
-        const statuses = ['processing', 'completed', 'shared'];
-        let currentId = testimonialId;
+        const create = await request(app)
+            .post('/api/testimonials')
+            .set('Authorization', `Bearer ${token}`)
+            .send({ customerName: 'Shared At Test' });
 
-        for (const status of statuses) {
+        const id = create.body.data.testimonialId;
+
+        for (const status of ['recording', 'processing', 'completed', 'shared']) {
             await request(app)
-                .patch(`/api/testimonials/${currentId}/status`)
+                .patch(`/api/testimonials/${id}/status`)
                 .set('Authorization', `Bearer ${token}`)
-                .send({ status: status });
+                .send({ status });
         }
 
         const res = await request(app)
-            .get(`/api/testimonials/${currentId}`)
+            .get(`/api/testimonials/${id}`)
             .set('Authorization', `Bearer ${token}`);
 
         expect(res.body.data.sharedAt).not.toBeNull();
@@ -195,7 +197,6 @@ describe('DELETE /api/testimonials/:testimonialId', () => {
 
         expect(del.status).toBe(200);
 
-        // Удалённый отзыв не должен находиться через getById
         const get = await request(app)
             .get(`/api/testimonials/${id}`)
             .set('Authorization', `Bearer ${token}`);
@@ -209,5 +210,167 @@ describe('DELETE /api/testimonials/:testimonialId', () => {
             .set('Authorization', `Bearer ${token}`);
 
         expect(res.status).toBe(404);
+    });
+});
+
+describe('POST /api/testimonials/:testimonialId/share', () => {
+    let completedId;
+
+    beforeEach(async () => {
+        const create = await request(app)
+            .post('/api/testimonials')
+            .set('Authorization', `Bearer ${token}`)
+            .send({ customerName: 'Share Test' });
+
+        completedId = create.body.data.testimonialId;
+
+        for (const status of ['recording', 'processing', 'completed']) {
+            await request(app)
+                .patch(`/api/testimonials/${completedId}/status`)
+                .set('Authorization', `Bearer ${token}`)
+                .send({ status });
+        }
+    });
+
+    test('валидные каналы - 200, каналы сохранены', async () => {
+        const res = await request(app)
+            .post(`/api/testimonials/${completedId}/share`)
+            .set('Authorization', `Bearer ${token}`)
+            .send({ channels: ['email', 'facebook'] });
+
+        expect(res.status).toBe(200);
+        expect(res.body.data.sharedChannels).toContain('email');
+        expect(res.body.data.sharedChannels).toContain('facebook');
+    });
+
+    test('статус completed → авто-переход в shared и sharedAt выставлен', async () => {
+        const res = await request(app)
+            .post(`/api/testimonials/${completedId}/share`)
+            .set('Authorization', `Bearer ${token}`)
+            .send({ channels: ['sms'] });
+
+        expect(res.status).toBe(200);
+        expect(res.body.data.status).toBe('shared');
+        expect(res.body.data.sharedAt).not.toBeNull();
+    });
+
+    test('дедупликация каналов - email не дублируется при повторном шаринге', async () => {
+        await request(app)
+            .post(`/api/testimonials/${completedId}/share`)
+            .set('Authorization', `Bearer ${token}`)
+            .send({ channels: ['email'] });
+
+        const res = await request(app)
+            .post(`/api/testimonials/${completedId}/share`)
+            .set('Authorization', `Bearer ${token}`)
+            .send({ channels: ['email', 'sms'] });
+
+        expect(res.status).toBe(200);
+        const emailCount = res.body.data.sharedChannels.filter(c => c === 'email').length;
+        expect(emailCount).toBe(1);
+        expect(res.body.data.sharedChannels).toContain('sms');
+    });
+
+    test('шаринг из статуса draft - 400', async () => {
+        const draft = await request(app)
+            .post('/api/testimonials')
+            .set('Authorization', `Bearer ${token}`)
+            .send({ customerName: 'Draft Share' });
+
+        const res = await request(app)
+            .post(`/api/testimonials/${draft.body.data.testimonialId}/share`)
+            .set('Authorization', `Bearer ${token}`)
+            .send({ channels: ['email'] });
+
+        expect(res.status).toBe(400);
+        expect(res.body.message).toMatch(/Cannot share/);
+    });
+
+    test('невалидный канал - 400', async () => {
+        const res = await request(app)
+            .post(`/api/testimonials/${completedId}/share`)
+            .set('Authorization', `Bearer ${token}`)
+            .send({ channels: ['telegram'] });
+
+        expect(res.status).toBe(400);
+        expect(res.body.message).toMatch(/Invalid channels/);
+    });
+
+    test('channels не передан - 400', async () => {
+        const res = await request(app)
+            .post(`/api/testimonials/${completedId}/share`)
+            .set('Authorization', `Bearer ${token}`)
+            .send({});
+
+        expect(res.status).toBe(400);
+    });
+
+    test('нет токена - 401', async () => {
+        const res = await request(app)
+            .post(`/api/testimonials/${completedId}/share`)
+            .send({ channels: ['email'] });
+
+        expect(res.status).toBe(401);
+    });
+});
+
+describe('403 - проверка владельца', () => {
+    let tokenB;
+    let userAId;
+
+    beforeAll(async () => {
+        await request(app).post('/api/auth/register').send({
+            email: 'userb@test.com',
+            password: 'MyPass1!',
+            businessName: 'User B Business',
+        });
+
+        const loginRes = await request(app).post('/api/auth/login').send({
+            email: 'userb@test.com',
+            password: 'MyPass1!',
+        });
+
+        tokenB = loginRes.body.data.token;
+
+        const create = await request(app)
+            .post('/api/testimonials')
+            .set('Authorization', `Bearer ${token}`)
+            .send({ customerName: 'User A Only' });
+
+        userAId = create.body.data.testimonialId;
+    });
+
+    test('GET чужого отзыва - 403', async () => {
+        const res = await request(app)
+            .get(`/api/testimonials/${userAId}`)
+            .set('Authorization', `Bearer ${tokenB}`);
+
+        expect(res.status).toBe(403);
+    });
+
+    test('PUT чужого отзыва - 403', async () => {
+        const res = await request(app)
+            .put(`/api/testimonials/${userAId}`)
+            .set('Authorization', `Bearer ${tokenB}`)
+            .send({ customerName: 'Hacked' });
+
+        expect(res.status).toBe(403);
+    });
+
+    test('PATCH status чужого отзыва - 403', async () => {
+        const res = await request(app)
+            .patch(`/api/testimonials/${userAId}/status`)
+            .set('Authorization', `Bearer ${tokenB}`)
+            .send({ status: 'recording' });
+
+        expect(res.status).toBe(403);
+    });
+
+    test('DELETE чужого отзыва - 403', async () => {
+        const res = await request(app)
+            .delete(`/api/testimonials/${userAId}`)
+            .set('Authorization', `Bearer ${tokenB}`);
+
+        expect(res.status).toBe(403);
     });
 });

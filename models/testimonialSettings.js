@@ -10,11 +10,7 @@ const testimonialSettingsSchema = new mongoose.Schema(
         questionnaire: {type: [String], required: false, default: constants.questionnaire},
         sendingOptions: {type: [String], required: false, default: constants.sendingOptions},
         thankYouMessage: {type: String, required: false, default: constants.thankYouMessage},
-        contactConsent: {type: Object, required: false,
-            default: {
-                enabled: {type: Boolean, default: true},
-                text: {type: String, default: constants.contactConsentText}
-            }},
+        contactConsent: {type: Object, required: false, default: { enabled: true, text: constants.contactConsentText }},
     },
     {timestamps: true}
 );
