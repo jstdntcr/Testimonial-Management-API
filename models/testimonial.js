@@ -22,7 +22,6 @@ const testimonialSchema = new mongoose.Schema(
     {timestamps: true}
 );
 
-testimonialSchema.index({testimonialId: 1});
 testimonialSchema.index({userId: 1});
 testimonialSchema.index({status: 1});
 testimonialSchema.index({userId: 1, isDeleted: 1});
