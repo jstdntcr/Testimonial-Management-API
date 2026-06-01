@@ -27,7 +27,7 @@ const createTestimonial = async (req, res) => {
             customerEmail,
             customerPhone,
             videoUrl,
-            rating,
+            rating: parseInt(rating),
             text,
             consentGiven,
             sharedChannels,
@@ -115,7 +115,7 @@ const updateTestimonialById = async (req, res) => {
         if (customerEmail !== undefined) updates.customerEmail = customerEmail;
         if (customerPhone !== undefined) updates.customerPhone = customerPhone;
         if (videoUrl !== undefined) updates.videoUrl = videoUrl;
-        if (rating !== undefined) updates.rating = rating;
+        if (rating !== undefined) updates.rating = parseInt(rating);
         if (text !== undefined) updates.text = text;
         if (consentGiven !== undefined) updates.consentGiven = consentGiven;
         if (sharedChannels !== undefined) updates.sharedChannels = sharedChannels;
@@ -373,8 +373,8 @@ const getTestimonialsWithFilters = async (req, res) => {
 
         if (minRating || maxRating) {
             filter.rating = {};
-            if (minRating) filter.rating.$gte = minRating;
-            if (maxRating) filter.rating.$lte = maxRating;
+            if (minRating) filter.rating.$gte = parseInt(minRating);
+            if (maxRating) filter.rating.$lte = parseInt(maxRating);
         }
 
         const page = parseInt(req.query.page) || constants.page;
@@ -454,6 +454,51 @@ const bulkTestimonialsTransition = async (req, res) => {
     }
 }
 
+const exportTestimonials = async (req, res) => {
+    try {
+        const {search, createdAfter, createdBefore, minRating, maxRating} = req.query;
+
+        const filter = {userId: req.user.userId, isDeleted: false};
+
+        if (search) filter.$or = [
+            {customerName: {$regex: search, $options: 'i'}},
+            {text: {$regex: search, $options: 'i'}},
+        ];
+
+        if (createdAfter || createdBefore) {
+            filter.createdAt = {};
+            if (createdAfter) filter.createdAt.$gte = new Date(createdAfter);
+            if (createdBefore) filter.createdAt.$lte = new Date(createdBefore);
+        }
+
+        if (minRating || maxRating) {
+            filter.rating = {};
+            if (minRating) filter.rating.$gte = parseInt(minRating);
+            if (maxRating) filter.rating.$lte = parseInt(maxRating);
+        }
+        const testimonials = await Testimonial.find(filter);
+
+        const headers = ['testimonialId', 'userId', 'customerName', 'customerEmail', 'customerPhone', 'videoUrl', 'rating',
+        'text', 'status', 'consentGiven', 'sharedAt', 'sharedChannels', 'isDeleted',
+        'deletedAt'];
+
+        const rows = testimonials.map(testimonial => {
+            const { _id, __v, ...rest } = testimonial.toObject();
+            return Object.values(rest).map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',');
+        });
+
+        const csv = [headers.join(','), ...rows].join('\n');
+
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', 'attachment; filename="testimonials.csv"');
+
+        return res.status(200).send(csv);
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ code: 500, status: 'failure', message: 'Server error' });
+    }
+}
+
 module.exports = {createTestimonial, getTestimonials, getTestimonialById, updateTestimonialById, testimonialTransition,
     deleteTestimonial, shareTestimonial, getTestimonialSettings, createTestimonialSettings, getAnalytics,
-    getTestimonialsWithFilters, bulkTestimonialsTransition};
+    getTestimonialsWithFilters, bulkTestimonialsTransition, exportTestimonials};

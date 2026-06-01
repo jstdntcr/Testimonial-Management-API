@@ -10,6 +10,7 @@ router.post('/settings', testimonialController.createTestimonialSettings)
 router.get('/analytics', testimonialController.getAnalytics);
 router.get('/search', testimonialController.getTestimonialsWithFilters);
 router.post('/bulk/status', testimonialController.bulkTestimonialsTransition);
+router.get('/export', testimonialController.exportTestimonials);
 router.post('/', testimonialController.createTestimonial);
 router.get('/', testimonialController.getTestimonials);
 router.get('/:testimonialId', testimonialController.getTestimonialById);
