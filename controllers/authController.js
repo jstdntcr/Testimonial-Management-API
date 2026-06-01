@@ -22,7 +22,7 @@ const registerUser = async (req, res) => {
         };
 
         if (Object.keys(errors).length > 0) {
-            return res.status(400).json({ code: 400, status: 'failure', errors });
+            return res.status(400).json({ code: 400, status: 'failure', message: `Error occurred: ${errors}` });
         }
 
         const lastUser = await User.findOne().sort({ userId: -1 });
@@ -39,7 +39,8 @@ const registerUser = async (req, res) => {
 
         const {password: _, ...safeUser} = user.toObject();
 
-        res.status(201).json({ code: 201, status: 'success', data: safeUser });
+        res.status(201).json({ code: 201, status: 'success', message: 'User registered successfully' ,
+            data: safeUser });
     } catch (err) {
         console.log(err);
         res.status(500).json({ code: 500, status: 'failure', message: 'Server error' });
@@ -66,7 +67,7 @@ const loginUser = async (req, res) => {
 
             const {password, ...safeUser} = user.toObject();
 
-            res.status(201).json({code: 201, status: 'success',
+            res.status(201).json({code: 201, status: 'success', message: 'Login successfully',
                 data: {userId: safeUser.userId, email: safeUser.email, token}});
         } else {
             res.status(401).json({code: 401, status: 'failure', message: 'Invalid Credentials'});
