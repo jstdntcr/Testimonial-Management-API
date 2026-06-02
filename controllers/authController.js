@@ -56,6 +56,18 @@ const registerUser = async (req, res) => {
 const loginUser = async (req, res) => {
     try {
         const {email, password} = req.body;
+
+        const emailResult = utils.validateEmail(email);
+
+        const errors = {
+            ...(emailResult.valid ? {} : { email: emailResult.errors }),
+            ...(typeof password === 'string' && password.length > 0 ? {} : { password: ['Password is required'] }),
+        };
+
+        if (Object.keys(errors).length > 0) {
+            return res.status(400).json({ code: 400, status: 'failure', message: `Error occurred: ${JSON.stringify(errors)}` });
+        }
+
         const user = await User.findOne({email: email});
 
         if (!user) {

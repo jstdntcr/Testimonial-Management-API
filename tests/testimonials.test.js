@@ -374,3 +374,88 @@ describe('403 - проверка владельца', () => {
         expect(res.status).toBe(403);
     });
 });
+
+describe('Валидация входных данных', () => {
+    test('POST без sharedChannels - 201 (поле опционально)', async () => {
+        const res = await request(app)
+            .post('/api/testimonials')
+            .set('Authorization', `Bearer ${token}`)
+            .send({ customerName: 'No Channels' });
+
+        expect(res.status).toBe(201);
+    });
+
+    test('POST с невалидным каналом в sharedChannels - 400', async () => {
+        const res = await request(app)
+            .post('/api/testimonials')
+            .set('Authorization', `Bearer ${token}`)
+            .send({ customerName: 'Bad Channel', sharedChannels: ['telegram'] });
+
+        expect(res.status).toBe(400);
+    });
+
+    test('POST с rating вне диапазона 1-5 - 400', async () => {
+        const res = await request(app)
+            .post('/api/testimonials')
+            .set('Authorization', `Bearer ${token}`)
+            .send({ customerName: 'Bad Rating', rating: 9 });
+
+        expect(res.status).toBe(400);
+    });
+
+    test('GET с невалидным status в query - 400', async () => {
+        const res = await request(app)
+            .get('/api/testimonials?status=invalidStatus')
+            .set('Authorization', `Bearer ${token}`);
+
+        expect(res.status).toBe(400);
+    });
+});
+
+describe('Auth — валидация', () => {
+    test('login без пароля - 400', async () => {
+        const res = await request(app)
+            .post('/api/auth/login')
+            .send({ email: 'test@test.com' });
+
+        expect(res.status).toBe(400);
+    });
+
+    test('register с дублирующимся email - 400', async () => {
+        const res = await request(app)
+            .post('/api/auth/register')
+            .send({ email: 'test@test.com', password: 'MyPass1!', businessName: 'Dup' });
+
+        expect(res.status).toBe(400);
+    });
+});
+
+describe('Settings — валидация', () => {
+    test('POST с невалидным типом isEnabled - 400', async () => {
+        const res = await request(app)
+            .post('/api/testimonials/settings')
+            .set('Authorization', `Bearer ${token}`)
+            .send({ isEnabled: 'yes' });
+
+        expect(res.status).toBe(400);
+    });
+
+    test('POST с невалидным каналом в sendingOptions - 400', async () => {
+        const res = await request(app)
+            .post('/api/testimonials/settings')
+            .set('Authorization', `Bearer ${token}`)
+            .send({ sendingOptions: ['email', 'telegram'] });
+
+        expect(res.status).toBe(400);
+    });
+
+    test('POST с валидными настройками - 200', async () => {
+        const res = await request(app)
+            .post('/api/testimonials/settings')
+            .set('Authorization', `Bearer ${token}`)
+            .send({ isEnabled: true, sendingOptions: ['email', 'sms'] });
+
+        expect(res.status).toBe(200);
+        expect(res.body.data.isEnabled).toBe(true);
+    });
+});

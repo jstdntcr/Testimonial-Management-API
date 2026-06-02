@@ -8,10 +8,12 @@ const createTestimonial = async (req, res) => {
         const {customerName, customerEmail, customerPhone,
         videoUrl, rating, text, consentGiven, sharedChannels} = req.body;
 
+        const channelsResult = sharedChannels !== undefined ? utils.validateChannels(sharedChannels) : { valid: true };
         const customerEmailResult = customerEmail ? utils.validateEmail(customerEmail) : { valid: true };
         const customerNameResult = customerName ? utils.validateName(customerName): { valid: false, errors: ['customerName is required'] };
 
         const errors = {
+            ...(channelsResult.valid ? {} : { sharedChannels: channelsResult.errors }),
             ...(customerEmailResult.valid ? {} : { customerEmail: customerEmailResult.errors }),
             ...(customerNameResult.valid ? {} : { customerName: customerNameResult.errors }),
             ...(rating === undefined || (rating >= 1 && rating <= 5) ? {} : { rating: 'Rating must be between 1 and 5' })
@@ -54,8 +56,8 @@ const getTestimonials = async (req, res) => {
             filter.status = req.query.status;
         }
 
-        const page = parseInt(req.query.page) || constants.page;
-        const limit = parseInt(req.query.limit) || constants.limit;
+        const page = Math.max(1, parseInt(req.query.page) || constants.page);
+        const limit = Math.max(1, parseInt(req.query.limit) || constants.limit);
         const skip = (page - 1) * limit;
         const sort = req.query.sort || constants.sortingField;
 
@@ -93,7 +95,7 @@ const getTestimonialById = async (req, res) => {
             return res.status(403).json({ code: 403, status: 'failure', message: 'Access forbidden' });
         }
 
-        return res.status(200).json({code: 200, status: 'success', message: 'Data received successfully',
+        return res.status(200).json({code: 200, status: 'success', message: 'Data retrieved successfully',
             data: testimonial.toObject()});
     } catch (err) {
         console.error(err);
@@ -107,10 +109,12 @@ const updateTestimonialById = async (req, res) => {
         const {customerName, customerEmail, customerPhone,
             videoUrl, rating, text, consentGiven, sharedChannels} = req.body;
 
+        const channelsResult = sharedChannels !== undefined ? utils.validateChannels(sharedChannels) : { valid: true };
         const customerEmailResult = customerEmail ? utils.validateEmail(customerEmail) : { valid: true };
         const customerNameResult = customerName ? utils.validateName(customerName) : { valid: true };
 
         const errors = {
+            ...(channelsResult.valid ? {} : { sharedChannels: channelsResult.errors }),
             ...(customerEmailResult.valid ? {} : { customerEmail: customerEmailResult.errors }),
             ...(customerNameResult.valid ? {} : { customerName: customerNameResult.errors }),
             ...(rating === undefined || (rating >= 1 && rating <= 5) ? {} : { rating: 'Rating must be between 1 and 5' })
@@ -242,15 +246,14 @@ const shareTestimonial = async (req, res) => {
         const {testimonialId} = req.params;
         const {channels} = req.body;
 
-        if (!channels || !Array.isArray(channels)) {
-            return res.status(400).json({ code: 400, status: 'failure', message: 'channels must be an array' });
+        if (channels === undefined) {
+            return res.status(400).json({ code: 400, status: 'failure', message: 'channels is required' });
         }
 
-        const invalidChannels = channels.filter(channel => !constants.channels.includes(channel));
-        if (invalidChannels.length > 0) {
+        const channelsResult = utils.validateChannels(channels);
+        if (!channelsResult.valid) {
             return res.status(400).json({ code: 400, status: 'failure',
-                message: `Invalid channels: ${invalidChannels.join(', ')}`
-            });
+                message: channelsResult.errors.join(', ') });
         }
 
         const testimonial = await Testimonial.findOne({
@@ -301,7 +304,7 @@ const shareTestimonial = async (req, res) => {
 
 const getTestimonialSettings = async (req, res) => {
     try {
-        const testimonialSettings = await TestimonialSettings.findOne({userId: req.user.userId});
+        const testimonialSettings = await TestimonialSettings.findOne({userId: parseInt(req.user.userId)});
 
         if (!testimonialSettings) {
             return res.status(200).json({code: 200, status: 'success',
@@ -321,6 +324,12 @@ const createTestimonialSettings = async (req, res) => {
         const { isEnabled, defaultVideoLength, videoLengthOptions,
             questionnaire, sendingOptions, thankYouMessage, contactConsent } = req.body;
 
+        const settingsResult = utils.validateSettings(req.body);
+        if (!settingsResult.valid) {
+            return res.status(400).json({ code: 400, status: 'failure',
+                message: `Error occurred: ${JSON.stringify(settingsResult.errors)}` });
+        }
+
         const updates = {};
         if (isEnabled !== undefined) updates.isEnabled = isEnabled;
         if (defaultVideoLength !== undefined) updates.defaultVideoLength = defaultVideoLength;
@@ -331,12 +340,12 @@ const createTestimonialSettings = async (req, res) => {
         if (contactConsent !== undefined) updates.contactConsent = contactConsent;
 
         const settings = await TestimonialSettings.findOneAndUpdate(
-            { userId: parseInt(req.user.userId), },
+            { userId: parseInt(req.user.userId) },
             { $set: updates },
             { new: true, upsert: true }
         );
 
-        return res.status(200).json({ code: 200, status: 'success', message: 'Testimonial settings successfully created',
+        return res.status(200).json({ code: 200, status: 'success', message: 'Testimonial settings saved successfully',
             data: settings.toObject() });
     } catch (err) {
         console.error(err);
@@ -388,8 +397,8 @@ const getAnalytics = async (req, res) => {
             }
         };
 
-        res.status(200).json({code: 200, status: 'success', message: 'Data retrieved successfully',
-        data: result});
+        return res.status(200).json({code: 200, status: 'success', message: 'Data retrieved successfully',
+            data: result});
     } catch (err) {
         console.error(err);
         return res.status(500).json({ code: 500, status: 'failure', message: 'Server error' });
@@ -419,8 +428,8 @@ const getTestimonialsWithFilters = async (req, res) => {
             if (maxRating) filter.rating.$lte = parseInt(maxRating);
         }
 
-        const page = parseInt(req.query.page) || constants.page;
-        const limit = parseInt(req.query.limit) || constants.limit;
+        const page = Math.max(1, parseInt(req.query.page) || constants.page);
+        const limit = Math.max(1, parseInt(req.query.limit) || constants.limit);
         const skip = (page - 1) * limit;
         const sort = req.query.sort || constants.sortingField;
 

@@ -12,7 +12,8 @@ const loginLimiter = rateLimit({
         message: 'Too many logins attempts'
     },
     standardHeaders: true,
-    legacyHeaders: false
+    legacyHeaders: false,
+    skip: () => process.env.NODE_ENV === 'test'
 });
 
 router.post('/register', loginLimiter, userController.registerUser);
