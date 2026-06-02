@@ -22,6 +22,9 @@
     "mongoose": "^9.6.3",
     "uuid": "^9.0.1"
   },
+  "mongodbMemoryServer": {
+    "version": "7.0.14"
+  },
   "devDependencies": {
     "jest": "^30.4.2",
     "mongodb-memory-server": "^11.2.0",

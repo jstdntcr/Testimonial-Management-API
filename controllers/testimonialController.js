@@ -47,6 +47,10 @@ const getTestimonials = async (req, res) => {
         const filter = { userId: parseInt(req.user.userId), isDeleted: false };
 
         if (req.query.status) {
+            if (!constants.testimonialStatus.includes(req.query.status)) {
+                return res.status(400).json({ code: 400, status: 'failure',
+                    message: `Invalid status value: ${req.query.status}` });
+            }
             filter.status = req.query.status;
         }
 
@@ -446,6 +450,16 @@ const bulkTestimonialsTransition = async (req, res) => {
         };
         const { testimonialIds, status: testimonialStatus } = req.body;
 
+        if (!testimonialIds || !Array.isArray(testimonialIds) || testimonialIds.length === 0) {
+            return res.status(400).json({ code: 400, status: 'failure',
+                message: 'testimonialIds must be a non-empty array' });
+        }
+
+        if (!testimonialStatus || !constants.testimonialStatus.includes(testimonialStatus)) {
+            return res.status(400).json({ code: 400, status: 'failure',
+                message: `Invalid status value: ${testimonialStatus}` });
+        }
+
         for (const itemId of testimonialIds) {
             const testimonial = await Testimonial.findOne({
                 testimonialId: itemId,
@@ -492,9 +506,17 @@ const bulkTestimonialsTransition = async (req, res) => {
 
 const exportTestimonials = async (req, res) => {
     try {
-        const {search, createdAfter, createdBefore, minRating, maxRating} = req.query;
+        const {search, createdAfter, createdBefore, minRating, maxRating, status} = req.query;
 
         const filter = {userId: parseInt(req.user.userId), isDeleted: false};
+
+        if (status) {
+            if (!constants.testimonialStatus.includes(status)) {
+                return res.status(400).json({ code: 400, status: 'failure',
+                    message: `Invalid status value: ${status}` });
+            }
+            filter.status = status;
+        }
 
         if (search) filter.$or = [
             {customerName: {$regex: search, $options: 'i'}},
@@ -512,6 +534,7 @@ const exportTestimonials = async (req, res) => {
             if (minRating) filter.rating.$gte = parseInt(minRating);
             if (maxRating) filter.rating.$lte = parseInt(maxRating);
         }
+
         const testimonials = await Testimonial.find(filter);
 
         const headers = ['testimonialId', 'userId', 'customerName', 'customerEmail', 'customerPhone', 'videoUrl', 'rating',
