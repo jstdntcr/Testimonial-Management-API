@@ -459,3 +459,38 @@ describe('Settings — валидация', () => {
         expect(res.body.data.isEnabled).toBe(true);
     });
 });
+
+describe('Edge cases — статусы, даты, маршруты', () => {
+    test('PATCH status с невалидным enum-значением - 400', async () => {
+        const create = await request(app)
+            .post('/api/testimonials')
+            .set('Authorization', `Bearer ${token}`)
+            .send({ customerName: 'Enum Test' });
+
+        const res = await request(app)
+            .patch(`/api/testimonials/${create.body.data.testimonialId}/status`)
+            .set('Authorization', `Bearer ${token}`)
+            .send({ status: 'banana' });
+
+        expect(res.status).toBe(400);
+        expect(res.body.message).toMatch(/Invalid status value/);
+    });
+
+    test('analytics с невалидной датой - 400', async () => {
+        const res = await request(app)
+            .get('/api/testimonials/analytics?startDate=not-a-date')
+            .set('Authorization', `Bearer ${token}`);
+
+        expect(res.status).toBe(400);
+    });
+
+    test('неизвестный маршрут - 404 в едином JSON-формате', async () => {
+        const res = await request(app)
+            .get('/api/nonexistent')
+            .set('Authorization', `Bearer ${token}`);
+
+        expect(res.status).toBe(404);
+        expect(res.body.status).toBe('failure');
+        expect(res.body).toHaveProperty('code', 404);
+    });
+});

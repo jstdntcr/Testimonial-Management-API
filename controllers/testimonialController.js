@@ -168,6 +168,11 @@ const testimonialTransition = async (req, res) => {
             return res.status(400).json({ code: 400, status: 'failure', message: 'Status is required' });
         }
 
+        if (!constants.testimonialStatus.includes(status)) {
+            return res.status(400).json({ code: 400, status: 'failure',
+                message: `Invalid status value: ${status}` });
+        }
+
         const testimonial = await Testimonial.findOne({
             testimonialId: testimonialId,
             isDeleted: false
@@ -361,13 +366,21 @@ const getAnalytics = async (req, res) => {
         };
 
         if (req.query.startDate) {
-            filter.createdAt = {$gte: new Date(req.query.startDate)};
+            const startDate = new Date(req.query.startDate);
+            if (isNaN(startDate.getTime())) {
+                return res.status(400).json({ code: 400, status: 'failure', message: 'Invalid startDate' });
+            }
+            filter.createdAt = {$gte: startDate};
         }
 
         if (req.query.endDate) {
+            const endDate = new Date(req.query.endDate);
+            if (isNaN(endDate.getTime())) {
+                return res.status(400).json({ code: 400, status: 'failure', message: 'Invalid endDate' });
+            }
             filter.createdAt = {
                 ...filter.createdAt,
-                $lte: new Date(req.query.endDate)
+                $lte: endDate
             };
         }
 
@@ -389,7 +402,7 @@ const getAnalytics = async (req, res) => {
             overview: {
                 total: totalTestimonials[0] ? totalTestimonials[0].total : 0,
                 byStatus: resultByStatus,
-                averageRating: totalTestimonials[0] ? totalTestimonials[0].avgRating : 0,
+                averageRating: (totalTestimonials[0] && totalTestimonials[0].avgRating) || 0,
             },
             period: {
                 startDate: req.query.startDate,
